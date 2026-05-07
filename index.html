@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pulsador</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="min-h-screen bg-slate-950 text-white">
+    <main class="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center p-6">
+      <section id="loginView" class="rounded-2xl bg-white/10 p-6 shadow-2xl ring-1 ring-white/15">
+        <p class="text-sm font-bold uppercase tracking-wide text-cyan-300">Concurso en directo</p>
+        <h1 class="mt-2 text-4xl font-black">Entra al pulsador</h1>
+        <label class="mt-6 block">
+          <span class="text-sm font-bold text-slate-200">Nombre de usuario</span>
+          <input id="usernameInput" class="mt-2 w-full rounded-xl border-0 bg-white p-4 text-xl font-bold text-slate-950 outline-none ring-4 ring-transparent focus:ring-cyan-300" maxlength="40" placeholder="Tu nombre">
+        </label>
+        <button id="enterButton" class="mt-5 w-full rounded-xl bg-cyan-300 px-5 py-4 text-xl font-black text-slate-950 transition hover:scale-[1.01]">Entrar</button>
+      </section>
+
+      <section id="buzzerView" class="hidden text-center">
+        <p id="helloText" class="mb-6 text-xl font-bold text-cyan-200"></p>
+        <button id="buzzButton" class="h-72 w-72 rounded-full bg-red-600 text-5xl font-black uppercase shadow-[0_24px_0_#7f1d1d] transition active:translate-y-5 active:shadow-[0_6px_0_#7f1d1d]">
+          Pulsador
+        </button>
+        <button id="leaveButton" class="mt-10 rounded-xl bg-white/10 px-5 py-3 text-base font-black text-white ring-1 ring-white/20 transition hover:bg-white/20">
+          Salir y cambiar nombre
+        </button>
+        <p id="statusText" class="mt-10 min-h-8 text-lg font-bold text-slate-300"></p>
+      </section>
+    </main>
+
+    <script>
+      // Pega aqui la URL de tu despliegue de Apps Script.
+      const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwBvwcEd0UYgWZOoj1CNj42MLIOqAbx1V5f5F8X6vT32FD3mBTXu6-jcz6lWkzd_iJjUg/exec";
+
+      const loginView = document.querySelector("#loginView");
+      const buzzerView = document.querySelector("#buzzerView");
+      const usernameInput = document.querySelector("#usernameInput");
+      const enterButton = document.querySelector("#enterButton");
+      const buzzButton = document.querySelector("#buzzButton");
+      const leaveButton = document.querySelector("#leaveButton");
+      const helloText = document.querySelector("#helloText");
+      const statusText = document.querySelector("#statusText");
+
+      let username = localStorage.getItem("buzzerUsername") || "";
+
+      function showBuzzer() {
+        loginView.classList.add("hidden");
+        buzzerView.classList.remove("hidden");
+        helloText.textContent = `Jugador: ${username}`;
+      }
+
+      function showLogin() {
+        buzzerView.classList.add("hidden");
+        loginView.classList.remove("hidden");
+        usernameInput.value = "";
+        usernameInput.focus();
+      }
+
+      async function sendAction(action) {
+        const response = await fetch(SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ username, action })
+        });
+
+        return response;
+      }
+
+      enterButton.addEventListener("click", async () => {
+        username = usernameInput.value.trim();
+        if (!username) return;
+
+        localStorage.setItem("buzzerUsername", username);
+        showBuzzer();
+        statusText.textContent = "Registrado. Esperando tu pulsacion.";
+        await sendAction("join");
+      });
+
+      buzzButton.addEventListener("click", async () => {
+        buzzButton.disabled = true;
+        statusText.textContent = "Pulsacion enviada.";
+        await sendAction("buzz");
+        setTimeout(() => {
+          buzzButton.disabled = false;
+          statusText.textContent = "Puedes volver a pulsar si el moderador reinicia.";
+        }, 1500);
+      });
+
+      leaveButton.addEventListener("click", async () => {
+        const previousUsername = username;
+        statusText.textContent = "Saliendo...";
+
+        if (previousUsername) {
+          await sendAction("leave");
+        }
+
+        localStorage.removeItem("buzzerUsername");
+        username = "";
+        showLogin();
+      });
+
+      if (username) showBuzzer();
+    </script>
+  </body>
+</html>
