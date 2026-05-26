@@ -15,12 +15,15 @@
           <span class="text-sm font-bold text-slate-200">Nombre de usuario</span>
           <input id="usernameInput" class="mt-2 w-full rounded-xl border-0 bg-white p-4 text-xl font-bold text-slate-950 outline-none ring-4 ring-transparent focus:ring-cyan-300" maxlength="40" placeholder="Tu nombre">
         </label>
-        <button id="enterButton" class="mt-5 w-full rounded-xl bg-cyan-300 px-5 py-4 text-xl font-black text-slate-950 transition hover:scale-[1.01]">Entrar</button>
+        <button id="enterButton" class="mt-5 w-full rounded-xl bg-cyan-300 px-5 py-4 text-xl font-black text-slate-950 transition hover:scale-[1.01]">
+          Entrar
+        </button>
+        <p id="loginError" class="mt-4 min-h-6 font-bold text-red-300"></p>
       </section>
 
       <section id="buzzerView" class="hidden text-center">
         <p id="helloText" class="mb-6 text-xl font-bold text-cyan-200"></p>
-        <button id="buzzButton" class="h-72 w-72 rounded-full bg-red-600 text-5xl font-black uppercase shadow-[0_24px_0_#7f1d1d] transition active:translate-y-5 active:shadow-[0_6px_0_#7f1d1d]">
+        <button id="buzzButton" class="h-72 w-72 rounded-full bg-red-600 text-5xl font-black uppercase shadow-[0_24px_0_#7f1d1d] transition active:translate-y-5 active:shadow-[0_6px_0_#7f1d1d] disabled:opacity-60">
           Pulsador
         </button>
         <button id="leaveButton" class="mt-10 rounded-xl bg-white/10 px-5 py-3 text-base font-black text-white ring-1 ring-white/20 transition hover:bg-white/20">
@@ -30,9 +33,32 @@
       </section>
     </main>
 
-    <script>
-      // Pega aqui la URL de tu despliegue de Apps Script.
-      const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwBvwcEd0UYgWZOoj1CNj42MLIOqAbx1V5f5F8X6vT32FD3mBTXu6-jcz6lWkzd_iJjUg/exec";
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+      import {
+        getDatabase,
+        ref,
+        set,
+        update,
+        push,
+        serverTimestamp,
+        onDisconnect
+      } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+
+      // Pega aqui la configuracion de Firebase de tu proyecto.
+      const firebaseConfig = {
+        apiKey: "AIzaSyDWvS8aYd7tx3pc2kxZewJVlXH5xIPAgHM",
+        authDomain: "pulsadorconcurso.firebaseapp.com",
+        databaseURL: "https://pulsadorconcurso-default-rtdb.europe-west1.firebasedatabase.app/",
+        projectId: "pulsadorconcurso",
+        storageBucket: "pulsadorconcurso.firebasestorage.app",
+        messagingSenderId: "124348060991",
+        appId: "1:124348060991:web:6dd54bbe290b1bfa61ef8a"
+      };
+
+      const ROOM_ID = "principal";
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
 
       const loginView = document.querySelector("#loginView");
       const buzzerView = document.querySelector("#buzzerView");
@@ -42,8 +68,15 @@
       const leaveButton = document.querySelector("#leaveButton");
       const helloText = document.querySelector("#helloText");
       const statusText = document.querySelector("#statusText");
+      const loginError = document.querySelector("#loginError");
 
       let username = localStorage.getItem("buzzerUsername") || "";
+      let playerId = localStorage.getItem("buzzerPlayerId") || crypto.randomUUID();
+      localStorage.setItem("buzzerPlayerId", playerId);
+
+      function playerRef() {
+        return ref(db, `rooms/${ROOM_ID}/participants/${playerId}`);
+      }
 
       function showBuzzer() {
         loginView.classList.add("hidden");
@@ -58,51 +91,83 @@
         usernameInput.focus();
       }
 
-      async function sendAction(action) {
-        const response = await fetch(SCRIPT_URL, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ username, action })
-        });
-
-        return response;
-      }
-
-      enterButton.addEventListener("click", async () => {
+      async function join() {
         username = usernameInput.value.trim();
-        if (!username) return;
-
-        localStorage.setItem("buzzerUsername", username);
-        showBuzzer();
-        statusText.textContent = "Registrado. Esperando tu pulsacion.";
-        await sendAction("join");
-      });
-
-      buzzButton.addEventListener("click", async () => {
-        buzzButton.disabled = true;
-        statusText.textContent = "Pulsacion enviada.";
-        await sendAction("buzz");
-        setTimeout(() => {
-          buzzButton.disabled = false;
-          statusText.textContent = "Puedes volver a pulsar si el moderador reinicia.";
-        }, 1500);
-      });
-
-      leaveButton.addEventListener("click", async () => {
-        const previousUsername = username;
-        statusText.textContent = "Saliendo...";
-
-        if (previousUsername) {
-          await sendAction("leave");
+        if (!username) {
+          loginError.textContent = "Escribe un nombre.";
+          return;
         }
 
-        localStorage.removeItem("buzzerUsername");
-        username = "";
-        showLogin();
-      });
+        loginError.textContent = "";
+        localStorage.setItem("buzzerUsername", username);
 
-      if (username) showBuzzer();
+        await set(playerRef(), {
+          id: playerId,
+          name: username,
+          active: true,
+          joinedAt: serverTimestamp(),
+          lastSeenAt: serverTimestamp()
+        });
+
+        onDisconnect(playerRef()).update({
+          active: false,
+          leftAt: serverTimestamp()
+        });
+
+        showBuzzer();
+        statusText.textContent = "Conectado. Listo para pulsar.";
+      }
+
+      async function buzz() {
+        buzzButton.disabled = true;
+        statusText.textContent = "Pulsacion enviada.";
+
+        const buzzRef = push(ref(db, `rooms/${ROOM_ID}/buzzes`));
+        await set(buzzRef, {
+          id: buzzRef.key,
+          playerId,
+          name: username,
+          createdAt: serverTimestamp()
+        });
+
+        await update(playerRef(), {
+          active: true,
+          lastBuzzAt: serverTimestamp(),
+          lastSeenAt: serverTimestamp()
+        });
+
+        setTimeout(() => {
+          buzzButton.disabled = false;
+          statusText.textContent = "Listo para volver a pulsar.";
+        }, 600);
+      }
+
+      async function leave() {
+        const oldName = username;
+        username = "";
+        localStorage.removeItem("buzzerUsername");
+
+        if (oldName) {
+          await update(playerRef(), {
+            active: false,
+            leftAt: serverTimestamp()
+          });
+        }
+
+        showLogin();
+      }
+
+      enterButton.addEventListener("click", join);
+      usernameInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") join();
+      });
+      buzzButton.addEventListener("click", buzz);
+      leaveButton.addEventListener("click", leave);
+
+      if (username) {
+        usernameInput.value = username;
+        join();
+      }
     </script>
   </body>
 </html>
