@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Moderador</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @keyframes urgentBlink {
+        0%, 100% {
+          background: #ef4444;
+          color: #ffffff;
+          transform: scale(1);
+        }
+
+        50% {
+          background: #ffffff;
+          color: #dc2626;
+          transform: scale(1.03);
+        }
+      }
+
+      .urgent-winner {
+        animation: urgentBlink 0.42s infinite;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-zinc-950 text-white">
+    <main class="grid min-h-screen gap-6 p-6 lg:grid-cols-[1fr_360px]">
+      <section class="flex flex-col justify-center rounded-2xl bg-white/10 p-8 ring-1 ring-white/15">
+        <p class="text-sm font-black uppercase tracking-wide text-amber-300">Pantalla del moderador</p>
+        <h1 class="mt-2 text-5xl font-black lg:text-7xl">Le toca a:</h1>
+        <div id="winnerBox" class="mt-10 rounded-2xl bg-zinc-900 p-10 text-center text-white shadow-2xl ring-4 ring-red-500">
+          <p id="winnerName" class="break-words text-7xl font-black uppercase lg:text-9xl">Esperando...</p>
+        </div>
+        <div class="mt-6 flex flex-wrap gap-3">
+          <button id="armAudioButton" class="rounded-xl bg-amber-300 px-5 py-3 font-black text-zinc-950">
+            Activar sonido
+          </button>
+          <button id="resetButton" class="rounded-xl bg-white/10 px-5 py-3 font-black text-white ring-1 ring-white/20">
+            Limpiar turno
+          </button>
+        </div>
+        <p id="lastUpdate" class="mt-6 text-lg font-bold text-zinc-300"></p>
+      </section>
+
+      <aside class="rounded-2xl bg-white p-6 text-zinc-950">
+        <div class="flex items-center justify-between">
+          <h2 class="text-2xl font-black">Participantes</h2>
+          <span id="participantCount" class="rounded-lg bg-zinc-950 px-3 py-1 font-black text-white">0</span>
+        </div>
+        <ul id="participantList" class="mt-5 grid gap-3"></ul>
+      </aside>
+    </main>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+      import {
+        getDatabase,
+        ref,
+        query,
+        limitToLast,
+        onValue,
+        remove,
+        update
+      } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+
+      // Pega aqui la misma configuracion de Firebase que en index.html.
+      const firebaseConfig = {
+        apiKey: "AIzaSyDWvS8aYd7tx3pc2kxZewJVlXH5xIPAgHM",
+        authDomain: "pulsadorconcurso.firebaseapp.com",
+        databaseURL: "https://pulsadorconcurso-default-rtdb.europe-west1.firebasedatabase.app/",
+        projectId: "pulsadorconcurso",
+        storageBucket: "pulsadorconcurso.firebasestorage.app",
+        messagingSenderId: "124348060991",
+        appId: "1:124348060991:web:6dd54bbe290b1bfa61ef8a"
+      };
+
+      const ROOM_ID = "principal";
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+
+      const winnerBox = document.querySelector("#winnerBox");
+      const winnerName = document.querySelector("#winnerName");
+      const lastUpdate = document.querySelector("#lastUpdate");
+      const participantCount = document.querySelector("#participantCount");
+      const participantList = document.querySelector("#participantList");
+      const armAudioButton = document.querySelector("#armAudioButton");
+      const resetButton = document.querySelector("#resetButton");
+
+      let lastBuzzId = null;
+      let audioUnlocked = false;
+
+      function playAlert() {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const context = new AudioContext();
+        const master = context.createGain();
+
+        master.gain.setValueAtTime(0.0001, context.currentTime);
+        master.gain.exponentialRampToValueAtTime(0.95, context.currentTime + 0.02);
+        master.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 1.15);
+        master.connect(context.destination);
+
+        [980, 1240, 1560].forEach((frequency, index) => {
+          const oscillator = context.createOscillator();
+          const gain = context.createGain();
+
+          oscillator.type = index === 1 ? "sawtooth" : "square";
+          oscillator.frequency.setValueAtTime(frequency, context.currentTime);
+          oscillator.frequency.linearRampToValueAtTime(frequency * 0.72, context.currentTime + 0.18);
+          oscillator.frequency.setValueAtTime(frequency * 1.18, context.currentTime + 0.34);
+          oscillator.frequency.linearRampToValueAtTime(frequency * 0.82, context.currentTime + 0.58);
+
+          gain.gain.setValueAtTime(0.28, context.currentTime);
+          oscillator.connect(gain);
+          gain.connect(master);
+          oscillator.start(context.currentTime + index * 0.035);
+          oscillator.stop(context.currentTime + 1.15);
+        });
+      }
+
+      function renderParticipants(snapshot) {
+        const participants = [];
+
+        snapshot.forEach((child) => {
+          const player = child.val();
+          if (player && player.active) {
+            participants.push(player);
+          }
+        });
+
+        participants.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+        participantCount.textContent = participants.length;
+        participantList.innerHTML = participants.map((player) => `
+          <li class="rounded-xl bg-zinc-100 px-4 py-3 text-lg font-black">${player.name}</li>
+        `).join("");
+      }
+
+      function renderLastBuzz(snapshot) {
+        let latest = null;
+
+        snapshot.forEach((child) => {
+          latest = child.val();
+        });
+
+        if (!latest || latest.id === lastBuzzId) return;
+
+        lastBuzzId = latest.id;
+        winnerName.textContent = latest.name;
+        winnerBox.classList.add("urgent-winner");
+        lastUpdate.textContent = "Nueva pulsacion recibida.";
+
+        if (audioUnlocked) playAlert();
+      }
+
+      armAudioButton.addEventListener("click", () => {
+        audioUnlocked = true;
+        playAlert();
+        lastUpdate.textContent = "Audio activado. Esperando pulsaciones.";
+      });
+
+      resetButton.addEventListener("click", async () => {
+        winnerBox.classList.remove("urgent-winner");
+        winnerName.textContent = "Esperando...";
+        lastBuzzId = null;
+        await remove(ref(db, `rooms/${ROOM_ID}/buzzes`));
+        await update(ref(db, `rooms/${ROOM_ID}`), { resetAt: Date.now() });
+        lastUpdate.textContent = "Turno limpiado.";
+      });
+
+      onValue(ref(db, `rooms/${ROOM_ID}/participants`), renderParticipants);
+      onValue(query(ref(db, `rooms/${ROOM_ID}/buzzes`), limitToLast(1)), renderLastBuzz);
+    </script>
+  </body>
+</html>
