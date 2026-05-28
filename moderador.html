@@ -38,7 +38,7 @@
             Activar sonido
           </button>
           <button id="resetButton" class="rounded-xl bg-white/10 px-5 py-3 font-black text-white ring-1 ring-white/20">
-            Limpiar turno
+            Continuar
           </button>
         </div>
         <p id="lastUpdate" class="mt-6 text-lg font-bold text-zinc-300"></p>
@@ -58,8 +58,6 @@
       import {
         getDatabase,
         ref,
-        query,
-        limitToLast,
         onValue,
         remove,
         update
@@ -136,19 +134,23 @@
         `).join("");
       }
 
-      function renderLastBuzz(snapshot) {
-        let latest = null;
+      function renderCurrentBuzz(snapshot) {
+        const latest = snapshot.val();
 
-        snapshot.forEach((child) => {
-          latest = child.val();
-        });
+        if (!latest) {
+          winnerBox.classList.remove("urgent-winner");
+          winnerName.textContent = "Esperando...";
+          lastBuzzId = null;
+          return;
+        }
 
-        if (!latest || latest.id === lastBuzzId) return;
+        const buzzId = `${latest.playerId}-${latest.createdAt}`;
+        if (buzzId === lastBuzzId) return;
 
-        lastBuzzId = latest.id;
+        lastBuzzId = buzzId;
         winnerName.textContent = latest.name;
         winnerBox.classList.add("urgent-winner");
-        lastUpdate.textContent = "Nueva pulsacion recibida.";
+        lastUpdate.textContent = "Turno bloqueado. Pulsa continuar para abrir el siguiente.";
 
         if (audioUnlocked) playAlert();
       }
@@ -163,13 +165,13 @@
         winnerBox.classList.remove("urgent-winner");
         winnerName.textContent = "Esperando...";
         lastBuzzId = null;
-        await remove(ref(db, `rooms/${ROOM_ID}/buzzes`));
+        await remove(ref(db, `rooms/${ROOM_ID}/currentBuzz`));
         await update(ref(db, `rooms/${ROOM_ID}`), { resetAt: Date.now() });
-        lastUpdate.textContent = "Turno limpiado.";
+        lastUpdate.textContent = "Turno abierto. Esperando pulsaciones.";
       });
 
       onValue(ref(db, `rooms/${ROOM_ID}/participants`), renderParticipants);
-      onValue(query(ref(db, `rooms/${ROOM_ID}/buzzes`), limitToLast(1)), renderLastBuzz);
+      onValue(ref(db, `rooms/${ROOM_ID}/currentBuzz`), renderCurrentBuzz);
     </script>
   </body>
 </html>
