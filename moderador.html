@@ -46,6 +46,9 @@
           <button id="resetButton" class="rounded-xl bg-white/10 px-5 py-3 font-black text-white ring-1 ring-white/20">
             Continuar
           </button>
+          <button id="finishButton" class="rounded-xl bg-blue-600 px-5 py-3 font-black text-white">
+            Finalizar
+          </button>
         </div>
         <p id="lastUpdate" class="mt-6 text-lg font-bold text-zinc-300"></p>
       </section>
@@ -58,6 +61,34 @@
         <ul id="participantList" class="mt-5 grid gap-3"></ul>
       </aside>
     </main>
+
+    <section id="podiumOverlay" class="fixed inset-0 z-50 hidden bg-zinc-950/95 p-6 text-white">
+      <div class="mx-auto flex min-h-full max-w-6xl flex-col justify-center">
+        <p class="text-sm font-black uppercase tracking-wide text-amber-300">Clasificacion final</p>
+        <h1 class="mt-2 text-5xl font-black lg:text-8xl">Podio del concurso</h1>
+        <div class="mt-10 grid items-end gap-4 md:grid-cols-3">
+          <div class="order-2 rounded-2xl bg-slate-200 p-6 text-center text-zinc-950 md:order-1">
+            <p class="text-3xl font-black">2º</p>
+            <p id="podiumSecond" class="mt-4 break-words text-4xl font-black">-</p>
+            <p id="podiumSecondScore" class="mt-2 text-2xl font-black text-slate-700">0 pts</p>
+          </div>
+          <div class="order-1 rounded-2xl bg-amber-300 p-8 text-center text-zinc-950 shadow-2xl md:order-2 md:pb-20">
+            <p class="text-4xl font-black">1º</p>
+            <p id="podiumFirst" class="mt-4 break-words text-5xl font-black lg:text-6xl">-</p>
+            <p id="podiumFirstScore" class="mt-2 text-3xl font-black text-amber-900">0 pts</p>
+          </div>
+          <div class="order-3 rounded-2xl bg-orange-500 p-6 text-center text-white">
+            <p class="text-3xl font-black">3º</p>
+            <p id="podiumThird" class="mt-4 break-words text-4xl font-black">-</p>
+            <p id="podiumThirdScore" class="mt-2 text-2xl font-black text-orange-100">0 pts</p>
+          </div>
+        </div>
+        <ol id="finalRanking" class="mt-8 grid gap-3 rounded-2xl bg-white p-5 text-zinc-950"></ol>
+        <button id="closePodiumButton" class="mt-6 w-fit rounded-xl bg-white/10 px-5 py-3 font-black text-white ring-1 ring-white/20">
+          Volver al moderador
+        </button>
+      </div>
+    </section>
 
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
@@ -94,10 +125,21 @@
       const correctButton = document.querySelector("#correctButton");
       const wrongButton = document.querySelector("#wrongButton");
       const resetButton = document.querySelector("#resetButton");
+      const finishButton = document.querySelector("#finishButton");
+      const podiumOverlay = document.querySelector("#podiumOverlay");
+      const closePodiumButton = document.querySelector("#closePodiumButton");
+      const finalRanking = document.querySelector("#finalRanking");
+      const podiumFirst = document.querySelector("#podiumFirst");
+      const podiumSecond = document.querySelector("#podiumSecond");
+      const podiumThird = document.querySelector("#podiumThird");
+      const podiumFirstScore = document.querySelector("#podiumFirstScore");
+      const podiumSecondScore = document.querySelector("#podiumSecondScore");
+      const podiumThirdScore = document.querySelector("#podiumThirdScore");
 
       let lastBuzzId = null;
       let audioUnlocked = false;
       let currentBuzz = null;
+      let currentParticipants = [];
 
       function playAlert() {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -127,6 +169,40 @@
         });
       }
 
+      function playVictoryFanfare() {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const context = new AudioContext();
+        const master = context.createGain();
+        const now = context.currentTime;
+        const notes = [
+          [392, 0, 0.28],
+          [523.25, 0.3, 0.3],
+          [659.25, 0.62, 0.34],
+          [783.99, 0.98, 0.45],
+          [1046.5, 1.45, 0.8]
+        ];
+
+        master.gain.setValueAtTime(0.0001, now);
+        master.gain.exponentialRampToValueAtTime(0.75, now + 0.04);
+        master.gain.exponentialRampToValueAtTime(0.0001, now + 2.55);
+        master.connect(context.destination);
+
+        notes.forEach(([frequency, delay, duration]) => {
+          [1, 1.5].forEach((multiplier, index) => {
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
+            oscillator.type = index === 0 ? "triangle" : "sine";
+            oscillator.frequency.setValueAtTime(frequency * multiplier, now + delay);
+            gain.gain.setValueAtTime(index === 0 ? 0.32 : 0.12, now + delay);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + duration);
+            oscillator.connect(gain);
+            gain.connect(master);
+            oscillator.start(now + delay);
+            oscillator.stop(now + delay + duration);
+          });
+        });
+      }
+
       function setScoringVisible(isVisible) {
         correctButton.classList.toggle("hidden", !isVisible);
         wrongButton.classList.toggle("hidden", !isVisible);
@@ -143,6 +219,7 @@
         });
 
         participants.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+        currentParticipants = participants;
         participantCount.textContent = participants.length;
         participantList.innerHTML = participants.map((player) => `
           <li class="flex items-center justify-between gap-3 rounded-xl bg-zinc-100 px-4 py-3 text-lg font-black">
@@ -232,6 +309,35 @@
 
       wrongButton.addEventListener("click", () => {
         scoreCurrentPlayer(-10, "incorrecto");
+      });
+
+      finishButton.addEventListener("click", () => {
+        const ranking = [...currentParticipants].sort((a, b) => {
+          return (Number(b.score) || 0) - (Number(a.score) || 0) || String(a.name).localeCompare(String(b.name));
+        });
+        const podium = [ranking[0], ranking[1], ranking[2]];
+        const podiumNames = [podiumFirst, podiumSecond, podiumThird];
+        const podiumScores = [podiumFirstScore, podiumSecondScore, podiumThirdScore];
+
+        podiumNames.forEach((element, index) => {
+          element.textContent = podium[index]?.name || "-";
+          podiumScores[index].textContent = `${podium[index]?.score || 0} pts`;
+        });
+
+        finalRanking.innerHTML = ranking.map((player, index) => `
+          <li class="grid grid-cols-[48px_1fr_auto] items-center gap-3 rounded-xl bg-zinc-100 px-4 py-3 text-lg font-black">
+            <span>#${index + 1}</span>
+            <span class="break-words">${player.name}</span>
+            <span>${player.score || 0} pts</span>
+          </li>
+        `).join("");
+
+        podiumOverlay.classList.remove("hidden");
+        if (audioUnlocked) playVictoryFanfare();
+      });
+
+      closePodiumButton.addEventListener("click", () => {
+        podiumOverlay.classList.add("hidden");
       });
 
       participantList.addEventListener("click", async (event) => {
