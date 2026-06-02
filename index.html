@@ -3,105 +3,52 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Moderador</title>
+    <title>Pulsador</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-      @keyframes urgentBlink {
-        0%, 100% {
-          background: #ef4444;
-          color: #ffffff;
-          transform: scale(1);
-        }
-
-        50% {
-          background: #ffffff;
-          color: #dc2626;
-          transform: scale(1.03);
-        }
-      }
-
-      .urgent-winner {
-        animation: urgentBlink 0.42s infinite;
-      }
-    </style>
   </head>
-  <body class="min-h-screen bg-zinc-950 text-white">
-    <main class="grid min-h-screen gap-6 p-6 lg:grid-cols-[1fr_360px]">
-      <section class="flex flex-col justify-center rounded-2xl bg-white/10 p-8 ring-1 ring-white/15">
-        <p class="text-sm font-black uppercase tracking-wide text-amber-300">Pantalla del moderador</p>
-        <h1 class="mt-2 text-5xl font-black lg:text-7xl">Le toca a:</h1>
-        <div id="winnerBox" class="mt-10 rounded-2xl bg-zinc-900 p-10 text-center text-white shadow-2xl ring-4 ring-red-500">
-          <p id="winnerName" class="break-words text-7xl font-black uppercase lg:text-9xl">Esperando...</p>
-        </div>
-        <div class="mt-6 flex flex-wrap gap-3">
-          <button id="armAudioButton" class="rounded-xl bg-amber-300 px-5 py-3 font-black text-zinc-950">
-            Activar sonido
-          </button>
-          <button id="correctButton" class="hidden rounded-xl bg-emerald-500 px-5 py-3 font-black text-white">
-            Correcto +20
-          </button>
-          <button id="wrongButton" class="hidden rounded-xl bg-red-600 px-5 py-3 font-black text-white">
-            Incorrecto -10
-          </button>
-          <button id="resetButton" class="rounded-xl bg-white/10 px-5 py-3 font-black text-white ring-1 ring-white/20">
-            Continuar
-          </button>
-          <button id="finishButton" class="rounded-xl bg-blue-600 px-5 py-3 font-black text-white">
-            Finalizar
-          </button>
-        </div>
-        <p id="lastUpdate" class="mt-6 text-lg font-bold text-zinc-300"></p>
+  <body class="min-h-screen bg-slate-950 text-white">
+    <main class="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center p-6">
+      <section id="loginView" class="rounded-2xl bg-white/10 p-6 shadow-2xl ring-1 ring-white/15">
+        <p class="text-sm font-bold uppercase tracking-wide text-cyan-300">Concurso en directo</p>
+        <h1 class="mt-2 text-4xl font-black">Entra al pulsador</h1>
+        <label class="mt-6 block">
+          <span class="text-sm font-bold text-slate-200">Nombre de usuario</span>
+          <input id="usernameInput" class="mt-2 w-full rounded-xl border-0 bg-white p-4 text-xl font-bold text-slate-950 outline-none ring-4 ring-transparent focus:ring-cyan-300" maxlength="40" placeholder="Tu nombre">
+        </label>
+        <button id="enterButton" class="mt-5 w-full rounded-xl bg-cyan-300 px-5 py-4 text-xl font-black text-slate-950 transition hover:scale-[1.01]">
+          Entrar
+        </button>
+        <p id="loginError" class="mt-4 min-h-6 font-bold text-red-300"></p>
       </section>
 
-      <aside class="rounded-2xl bg-white p-6 text-zinc-950">
-        <div class="flex items-center justify-between">
-          <h2 class="text-2xl font-black">Participantes</h2>
-          <span id="participantCount" class="rounded-lg bg-zinc-950 px-3 py-1 font-black text-white">0</span>
-        </div>
-        <ul id="participantList" class="mt-5 grid gap-3"></ul>
-      </aside>
-    </main>
-
-    <section id="podiumOverlay" class="fixed inset-0 z-50 hidden bg-zinc-950/95 p-6 text-white">
-      <div class="mx-auto flex min-h-full max-w-6xl flex-col justify-center">
-        <p class="text-sm font-black uppercase tracking-wide text-amber-300">Clasificacion final</p>
-        <h1 class="mt-2 text-5xl font-black lg:text-8xl">Podio del concurso</h1>
-        <div class="mt-10 grid items-end gap-4 md:grid-cols-3">
-          <div class="order-2 rounded-2xl bg-slate-200 p-6 text-center text-zinc-950 md:order-1">
-            <p class="text-3xl font-black">2º</p>
-            <p id="podiumSecond" class="mt-4 break-words text-4xl font-black">-</p>
-            <p id="podiumSecondScore" class="mt-2 text-2xl font-black text-slate-700">0 pts</p>
-          </div>
-          <div class="order-1 rounded-2xl bg-amber-300 p-8 text-center text-zinc-950 shadow-2xl md:order-2 md:pb-20">
-            <p class="text-4xl font-black">1º</p>
-            <p id="podiumFirst" class="mt-4 break-words text-5xl font-black lg:text-6xl">-</p>
-            <p id="podiumFirstScore" class="mt-2 text-3xl font-black text-amber-900">0 pts</p>
-          </div>
-          <div class="order-3 rounded-2xl bg-orange-500 p-6 text-center text-white">
-            <p class="text-3xl font-black">3º</p>
-            <p id="podiumThird" class="mt-4 break-words text-4xl font-black">-</p>
-            <p id="podiumThirdScore" class="mt-2 text-2xl font-black text-orange-100">0 pts</p>
-          </div>
-        </div>
-        <ol id="finalRanking" class="mt-8 grid gap-3 rounded-2xl bg-white p-5 text-zinc-950"></ol>
-        <button id="closePodiumButton" class="mt-6 w-fit rounded-xl bg-white/10 px-5 py-3 font-black text-white ring-1 ring-white/20">
-          Volver al moderador
+      <section id="buzzerView" class="hidden text-center">
+        <p id="helloText" class="mb-6 text-xl font-bold text-cyan-200"></p>
+        <button id="buzzButton" class="h-72 w-72 rounded-full bg-red-600 text-5xl font-black uppercase shadow-[0_24px_0_#7f1d1d] transition active:translate-y-5 active:shadow-[0_6px_0_#7f1d1d] disabled:opacity-60">
+          Pulsador
         </button>
-      </div>
-    </section>
+        <button id="leaveButton" class="mt-10 rounded-xl bg-white/10 px-5 py-3 text-base font-black text-white ring-1 ring-white/20 transition hover:bg-white/20">
+          Salir y cambiar nombre
+        </button>
+        <p id="statusText" class="mt-10 min-h-8 text-lg font-bold text-slate-300"></p>
+      </section>
+    </main>
 
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
       import {
         getDatabase,
         ref,
-        onValue,
-        remove,
+        set,
         update,
-        runTransaction
+        push,
+        serverTimestamp,
+        onDisconnect,
+        onValue,
+        runTransaction,
+        get
       } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
-      // Pega aqui la misma configuracion de Firebase que en index.html.
+      // Pega aqui la configuracion de Firebase de tu proyecto.
       const firebaseConfig = {
         apiKey: "AIzaSyDWvS8aYd7tx3pc2kxZewJVlXH5xIPAgHM",
         authDomain: "pulsadorconcurso.firebaseapp.com",
@@ -116,254 +63,182 @@
       const app = initializeApp(firebaseConfig);
       const db = getDatabase(app);
 
-      const winnerBox = document.querySelector("#winnerBox");
-      const winnerName = document.querySelector("#winnerName");
-      const lastUpdate = document.querySelector("#lastUpdate");
-      const participantCount = document.querySelector("#participantCount");
-      const participantList = document.querySelector("#participantList");
-      const armAudioButton = document.querySelector("#armAudioButton");
-      const correctButton = document.querySelector("#correctButton");
-      const wrongButton = document.querySelector("#wrongButton");
-      const resetButton = document.querySelector("#resetButton");
-      const finishButton = document.querySelector("#finishButton");
-      const podiumOverlay = document.querySelector("#podiumOverlay");
-      const closePodiumButton = document.querySelector("#closePodiumButton");
-      const finalRanking = document.querySelector("#finalRanking");
-      const podiumFirst = document.querySelector("#podiumFirst");
-      const podiumSecond = document.querySelector("#podiumSecond");
-      const podiumThird = document.querySelector("#podiumThird");
-      const podiumFirstScore = document.querySelector("#podiumFirstScore");
-      const podiumSecondScore = document.querySelector("#podiumSecondScore");
-      const podiumThirdScore = document.querySelector("#podiumThirdScore");
+      const loginView = document.querySelector("#loginView");
+      const buzzerView = document.querySelector("#buzzerView");
+      const usernameInput = document.querySelector("#usernameInput");
+      const enterButton = document.querySelector("#enterButton");
+      const buzzButton = document.querySelector("#buzzButton");
+      const leaveButton = document.querySelector("#leaveButton");
+      const helloText = document.querySelector("#helloText");
+      const statusText = document.querySelector("#statusText");
+      const loginError = document.querySelector("#loginError");
 
-      let lastBuzzId = null;
-      let audioUnlocked = false;
-      let currentBuzz = null;
-      let currentParticipants = [];
+      let username = localStorage.getItem("buzzerUsername") || "";
+      let playerId = localStorage.getItem("buzzerPlayerId") || crypto.randomUUID();
+      let turnLocked = false;
+      let latestCurrentBuzz = null;
+      let ownParticipantUnsubscribe = null;
+      localStorage.setItem("buzzerPlayerId", playerId);
 
-      function playAlert() {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        const context = new AudioContext();
-        const master = context.createGain();
-
-        master.gain.setValueAtTime(0.0001, context.currentTime);
-        master.gain.exponentialRampToValueAtTime(0.95, context.currentTime + 0.02);
-        master.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 1.15);
-        master.connect(context.destination);
-
-        [980, 1240, 1560].forEach((frequency, index) => {
-          const oscillator = context.createOscillator();
-          const gain = context.createGain();
-
-          oscillator.type = index === 1 ? "sawtooth" : "square";
-          oscillator.frequency.setValueAtTime(frequency, context.currentTime);
-          oscillator.frequency.linearRampToValueAtTime(frequency * 0.72, context.currentTime + 0.18);
-          oscillator.frequency.setValueAtTime(frequency * 1.18, context.currentTime + 0.34);
-          oscillator.frequency.linearRampToValueAtTime(frequency * 0.82, context.currentTime + 0.58);
-
-          gain.gain.setValueAtTime(0.28, context.currentTime);
-          oscillator.connect(gain);
-          gain.connect(master);
-          oscillator.start(context.currentTime + index * 0.035);
-          oscillator.stop(context.currentTime + 1.15);
-        });
+      function playerRef() {
+        return ref(db, `rooms/${ROOM_ID}/participants/${playerId}`);
       }
 
-      function playVictoryFanfare() {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        const context = new AudioContext();
-        const master = context.createGain();
-        const now = context.currentTime;
-        const notes = [
-          [392, 0, 0.28],
-          [523.25, 0.3, 0.3],
-          [659.25, 0.62, 0.34],
-          [783.99, 0.98, 0.45],
-          [1046.5, 1.45, 0.8]
-        ];
-
-        master.gain.setValueAtTime(0.0001, now);
-        master.gain.exponentialRampToValueAtTime(0.75, now + 0.04);
-        master.gain.exponentialRampToValueAtTime(0.0001, now + 2.55);
-        master.connect(context.destination);
-
-        notes.forEach(([frequency, delay, duration]) => {
-          [1, 1.5].forEach((multiplier, index) => {
-            const oscillator = context.createOscillator();
-            const gain = context.createGain();
-            oscillator.type = index === 0 ? "triangle" : "sine";
-            oscillator.frequency.setValueAtTime(frequency * multiplier, now + delay);
-            gain.gain.setValueAtTime(index === 0 ? 0.32 : 0.12, now + delay);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + duration);
-            oscillator.connect(gain);
-            gain.connect(master);
-            oscillator.start(now + delay);
-            oscillator.stop(now + delay + duration);
-          });
-        });
+      function showBuzzer() {
+        loginView.classList.add("hidden");
+        buzzerView.classList.remove("hidden");
+        helloText.textContent = `Jugador: ${username}`;
+        applyCurrentBuzzState();
       }
 
-      function setScoringVisible(isVisible) {
-        correctButton.classList.toggle("hidden", !isVisible);
-        wrongButton.classList.toggle("hidden", !isVisible);
+      function showLogin() {
+        buzzerView.classList.add("hidden");
+        loginView.classList.remove("hidden");
+        usernameInput.value = "";
+        usernameInput.focus();
       }
 
-      function renderParticipants(snapshot) {
-        const participants = [];
-
-        snapshot.forEach((child) => {
-          const player = child.val();
-          if (player && player.active) {
-            participants.push({ ...player, id: child.key });
-          }
-        });
-
-        participants.sort((a, b) => String(a.name).localeCompare(String(b.name)));
-        currentParticipants = participants;
-        participantCount.textContent = participants.length;
-        participantList.innerHTML = participants.map((player) => `
-          <li class="flex items-center justify-between gap-3 rounded-xl bg-zinc-100 px-4 py-3 text-lg font-black">
-            <span class="min-w-0 flex-1 break-words">${player.name}</span>
-            <span class="rounded-lg bg-zinc-950 px-3 py-2 text-sm text-white">${player.score || 0} pts</span>
-            <button
-              class="shrink-0 rounded-lg bg-red-600 px-3 py-2 text-sm font-black text-white transition hover:bg-red-700"
-              data-remove-player="${player.id}"
-              data-player-name="${player.name}"
-            >
-              Eliminar
-            </button>
-          </li>
-        `).join("");
-      }
-
-      function renderCurrentBuzz(snapshot) {
-        const latest = snapshot.val();
-        currentBuzz = latest;
-
-        if (!latest) {
-          winnerBox.classList.remove("urgent-winner");
-          winnerName.textContent = "Esperando...";
-          lastBuzzId = null;
-          setScoringVisible(false);
+      async function join() {
+        username = usernameInput.value.trim();
+        if (!username) {
+          loginError.textContent = "Escribe un nombre.";
           return;
         }
 
-        const buzzId = `${latest.playerId}-${latest.createdAt}`;
-        if (buzzId === lastBuzzId) return;
-
-        lastBuzzId = buzzId;
-        winnerName.textContent = latest.name;
-        winnerBox.classList.add("urgent-winner");
-        setScoringVisible(true);
-        lastUpdate.textContent = "Turno bloqueado. Pulsa continuar para abrir el siguiente.";
-
-        if (audioUnlocked) playAlert();
-      }
-
-      async function scoreCurrentPlayer(points, label) {
-        if (!currentBuzz || !currentBuzz.playerId) {
-          lastUpdate.textContent = "No hay ningun participante seleccionado.";
-          return;
+        loginError.textContent = "";
+        localStorage.setItem("buzzerUsername", username);
+        if (ownParticipantUnsubscribe) {
+          ownParticipantUnsubscribe();
+          ownParticipantUnsubscribe = null;
         }
 
-        const selectedName = currentBuzz.name;
-        const selectedPlayerId = currentBuzz.playerId;
-        correctButton.disabled = true;
-        wrongButton.disabled = true;
-
-        await runTransaction(ref(db, `rooms/${ROOM_ID}/participants/${selectedPlayerId}/score`), (currentScore) => {
-          return (Number(currentScore) || 0) + points;
+        const previousPlayer = (await get(playerRef())).val();
+        await set(playerRef(), {
+          id: playerId,
+          name: username,
+          active: true,
+          score: Number(previousPlayer?.score) || 0,
+          joinedAt: serverTimestamp(),
+          lastSeenAt: serverTimestamp()
         });
 
-        winnerBox.classList.remove("urgent-winner");
-        winnerName.textContent = "Esperando...";
-        lastBuzzId = null;
-        setScoringVisible(false);
-        await remove(ref(db, `rooms/${ROOM_ID}/currentBuzz`));
-        await update(ref(db, `rooms/${ROOM_ID}`), { resetAt: Date.now() });
-
-        correctButton.disabled = false;
-        wrongButton.disabled = false;
-        lastUpdate.textContent = `${selectedName}: ${label} (${points > 0 ? "+" : ""}${points} puntos). Turno abierto.`;
-      }
-
-      armAudioButton.addEventListener("click", () => {
-        audioUnlocked = true;
-        playAlert();
-        lastUpdate.textContent = "Audio activado. Esperando pulsaciones.";
-      });
-
-      resetButton.addEventListener("click", async () => {
-        winnerBox.classList.remove("urgent-winner");
-        winnerName.textContent = "Esperando...";
-        lastBuzzId = null;
-        setScoringVisible(false);
-        await remove(ref(db, `rooms/${ROOM_ID}/currentBuzz`));
-        await update(ref(db, `rooms/${ROOM_ID}`), { resetAt: Date.now() });
-        lastUpdate.textContent = "Turno abierto. Esperando pulsaciones.";
-      });
-
-      correctButton.addEventListener("click", () => {
-        scoreCurrentPlayer(20, "correcto");
-      });
-
-      wrongButton.addEventListener("click", () => {
-        scoreCurrentPlayer(-10, "incorrecto");
-      });
-
-      finishButton.addEventListener("click", () => {
-        const ranking = [...currentParticipants].sort((a, b) => {
-          return (Number(b.score) || 0) - (Number(a.score) || 0) || String(a.name).localeCompare(String(b.name));
-        });
-        const podium = [ranking[0], ranking[1], ranking[2]];
-        const podiumNames = [podiumFirst, podiumSecond, podiumThird];
-        const podiumScores = [podiumFirstScore, podiumSecondScore, podiumThirdScore];
-
-        podiumNames.forEach((element, index) => {
-          element.textContent = podium[index]?.name || "-";
-          podiumScores[index].textContent = `${podium[index]?.score || 0} pts`;
-        });
-
-        finalRanking.innerHTML = ranking.map((player, index) => `
-          <li class="grid grid-cols-[48px_1fr_auto] items-center gap-3 rounded-xl bg-zinc-100 px-4 py-3 text-lg font-black">
-            <span>#${index + 1}</span>
-            <span class="break-words">${player.name}</span>
-            <span>${player.score || 0} pts</span>
-          </li>
-        `).join("");
-
-        podiumOverlay.classList.remove("hidden");
-        if (audioUnlocked) playVictoryFanfare();
-      });
-
-      closePodiumButton.addEventListener("click", () => {
-        podiumOverlay.classList.add("hidden");
-      });
-
-      participantList.addEventListener("click", async (event) => {
-        const button = event.target.closest("[data-remove-player]");
-        if (!button) return;
-
-        const playerId = button.dataset.removePlayer;
-        const playerName = button.dataset.playerName || "participante";
-
-        await update(ref(db, `rooms/${ROOM_ID}/participants/${playerId}`), {
+        onDisconnect(playerRef()).update({
           active: false,
-          removedAt: Date.now()
+          leftAt: serverTimestamp()
         });
 
-        if (currentBuzz && currentBuzz.playerId === playerId) {
-          winnerBox.classList.remove("urgent-winner");
-          winnerName.textContent = "Esperando...";
-          lastBuzzId = null;
-          await remove(ref(db, `rooms/${ROOM_ID}/currentBuzz`));
+        ownParticipantUnsubscribe = onValue(playerRef(), (snapshot) => {
+          const player = snapshot.val();
+          if (!username || !player || player.active !== false || !player.removedAt) return;
+
+          username = "";
+          localStorage.removeItem("buzzerUsername");
+          statusText.textContent = "";
+          loginError.textContent = "El moderador te ha eliminado. Puedes entrar de nuevo con otro nombre.";
+          showLogin();
+        });
+
+        showBuzzer();
+      }
+
+      function applyCurrentBuzzState() {
+        if (!username) return;
+
+        if (!latestCurrentBuzz) {
+          turnLocked = false;
+          buzzButton.disabled = false;
+          statusText.textContent = "Turno abierto. Listo para pulsar.";
+          return;
         }
 
-        lastUpdate.textContent = `${playerName} eliminado.`;
+        turnLocked = true;
+        buzzButton.disabled = true;
+
+        if (latestCurrentBuzz.playerId === playerId) {
+          statusText.textContent = "¡Has pulsado primero! Espera al moderador.";
+        } else {
+          statusText.textContent = `Turno bloqueado por ${latestCurrentBuzz.name}.`;
+        }
+      }
+
+      async function buzz() {
+        if (turnLocked) {
+          statusText.textContent = "Turno bloqueado. Espera a que el moderador pulse continuar.";
+          return;
+        }
+
+        buzzButton.disabled = true;
+        statusText.textContent = "Comprobando turno...";
+
+        const currentBuzzRef = ref(db, `rooms/${ROOM_ID}/currentBuzz`);
+        const result = await runTransaction(currentBuzzRef, (currentValue) => {
+          if (currentValue !== null) {
+            return;
+          }
+
+          return {
+            playerId,
+            name: username,
+            createdAt: Date.now()
+          };
+        });
+
+        if (!result.committed) {
+          turnLocked = true;
+          buzzButton.disabled = true;
+          statusText.textContent = "Ya ha pulsado otra persona. Espera al siguiente turno.";
+          return;
+        }
+
+        turnLocked = true;
+        statusText.textContent = "¡Has pulsado primero!";
+
+        const buzzRef = push(ref(db, `rooms/${ROOM_ID}/buzzes`));
+        await set(buzzRef, {
+          id: buzzRef.key,
+          playerId,
+          name: username,
+          createdAt: serverTimestamp()
+        });
+
+        await update(playerRef(), {
+          active: true,
+          lastBuzzAt: serverTimestamp(),
+          lastSeenAt: serverTimestamp()
+        });
+      }
+
+      async function leave() {
+        const oldName = username;
+        username = "";
+        localStorage.removeItem("buzzerUsername");
+
+        if (oldName) {
+          await update(playerRef(), {
+            active: false,
+            leftAt: serverTimestamp()
+          });
+        }
+
+        showLogin();
+      }
+
+      enterButton.addEventListener("click", join);
+      usernameInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") join();
+      });
+      buzzButton.addEventListener("click", buzz);
+      leaveButton.addEventListener("click", leave);
+
+      onValue(ref(db, `rooms/${ROOM_ID}/currentBuzz`), (snapshot) => {
+        latestCurrentBuzz = snapshot.val();
+        applyCurrentBuzzState();
       });
 
-      onValue(ref(db, `rooms/${ROOM_ID}/participants`), renderParticipants);
-      onValue(ref(db, `rooms/${ROOM_ID}/currentBuzz`), renderCurrentBuzz);
+      if (username) {
+        usernameInput.value = username;
+        join();
+      }
     </script>
   </body>
 </html>
