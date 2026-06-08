@@ -49,6 +49,9 @@
           <button id="finishButton" class="rounded-xl bg-blue-600 px-5 py-3 font-black text-white">
             Finalizar
           </button>
+          <button id="resetScoresButton" class="rounded-xl bg-zinc-800 px-5 py-3 font-black text-white ring-1 ring-white/20">
+            Reiniciar puntos
+          </button>
         </div>
         <p id="lastUpdate" class="mt-6 text-lg font-bold text-zinc-300"></p>
       </section>
@@ -126,6 +129,7 @@
       const wrongButton = document.querySelector("#wrongButton");
       const resetButton = document.querySelector("#resetButton");
       const finishButton = document.querySelector("#finishButton");
+      const resetScoresButton = document.querySelector("#resetScoresButton");
       const podiumOverlay = document.querySelector("#podiumOverlay");
       const closePodiumButton = document.querySelector("#closePodiumButton");
       const finalRanking = document.querySelector("#finalRanking");
@@ -334,6 +338,23 @@
 
         podiumOverlay.classList.remove("hidden");
         if (audioUnlocked) playVictoryFanfare();
+      });
+
+      resetScoresButton.addEventListener("click", async () => {
+        if (!currentParticipants.length) {
+          lastUpdate.textContent = "No hay participantes activos para reiniciar.";
+          return;
+        }
+
+        resetScoresButton.disabled = true;
+        const updates = {};
+        currentParticipants.forEach((player) => {
+          updates[`rooms/${ROOM_ID}/participants/${player.id}/score`] = 0;
+        });
+
+        await update(ref(db), updates);
+        resetScoresButton.disabled = false;
+        lastUpdate.textContent = "Puntuaciones reiniciadas a 0.";
       });
 
       closePodiumButton.addEventListener("click", () => {
