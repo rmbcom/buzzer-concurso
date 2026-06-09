@@ -4,32 +4,223 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Pulsador</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --bg: #020604;
+        --panel: rgba(3, 18, 12, 0.9);
+        --green: #39ff88;
+        --cyan: #20e3ff;
+        --amber: #ffd166;
+        --red: #ff3864;
+        --ink: #d9ffe7;
+        --muted: #82b69a;
+        --line: rgba(57, 255, 136, 0.32);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        color: var(--ink);
+        font-family: "Courier New", Consolas, monospace;
+        background: var(--bg);
+        overflow-x: hidden;
+      }
+
+      #matrix {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        opacity: 0.24;
+      }
+
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 1;
+        background: repeating-linear-gradient(
+          to bottom,
+          rgba(255, 255, 255, 0.04) 0,
+          rgba(255, 255, 255, 0.04) 1px,
+          transparent 1px,
+          transparent 5px
+        );
+        mix-blend-mode: screen;
+      }
+
+      main {
+        position: relative;
+        z-index: 2;
+        width: min(720px, 100%);
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 20px;
+        display: grid;
+        place-items: center;
+      }
+
+      .panel {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: clamp(20px, 4vw, 36px);
+        background: var(--panel);
+        box-shadow: 0 0 36px rgba(57, 255, 136, 0.16), inset 0 0 28px rgba(57, 255, 136, 0.08);
+      }
+
+      .hidden { display: none !important; }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--green);
+        font-size: 0.82rem;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0 0 22px;
+        color: var(--green);
+        font-size: clamp(2.5rem, 10vw, 5.4rem);
+        line-height: 0.9;
+        letter-spacing: 0;
+        text-transform: uppercase;
+        text-shadow: 0 0 26px rgba(57, 255, 136, 0.34);
+      }
+
+      label {
+        display: grid;
+        gap: 9px;
+        color: var(--muted);
+        font-size: 0.92rem;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      input,
+      button {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px 16px;
+        color: var(--ink);
+        background: rgba(0, 0, 0, 0.44);
+        font: inherit;
+        font-weight: 900;
+      }
+
+      input:focus {
+        outline: 3px solid rgba(32, 227, 255, 0.2);
+        border-color: var(--cyan);
+      }
+
+      button {
+        cursor: pointer;
+        transition: transform 140ms ease, opacity 140ms ease, box-shadow 140ms ease;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 18px rgba(57, 255, 136, 0.24);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+        transform: none;
+      }
+
+      .primary {
+        margin-top: 18px;
+        color: #001b0b;
+        background: var(--green);
+      }
+
+      .buzzer-screen {
+        width: 100%;
+        text-align: center;
+      }
+
+      .hello {
+        margin: 0 0 24px;
+        color: var(--cyan);
+        font-size: clamp(1.1rem, 4vw, 1.6rem);
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .buzz {
+        width: min(310px, 78vw);
+        height: min(310px, 78vw);
+        border-radius: 999px;
+        border: 6px solid rgba(255, 255, 255, 0.16);
+        color: white;
+        background:
+          radial-gradient(circle at 38% 28%, rgba(255, 255, 255, 0.26), transparent 24%),
+          radial-gradient(circle at center, #ff3864, #b31335 62%, #570817 100%);
+        box-shadow: 0 22px 0 #4c0512, 0 0 56px rgba(255, 56, 100, 0.46);
+        font-size: clamp(2.4rem, 10vw, 4.8rem);
+        line-height: 0.95;
+        text-transform: uppercase;
+      }
+
+      .buzz:active {
+        transform: translateY(14px);
+        box-shadow: 0 8px 0 #4c0512, 0 0 48px rgba(255, 56, 100, 0.42);
+      }
+
+      .secondary {
+        width: auto;
+        margin-top: 34px;
+        color: var(--green);
+        background: rgba(57, 255, 136, 0.1);
+      }
+
+      .status {
+        min-height: 1.6em;
+        margin: 20px 0 0;
+        color: var(--muted);
+        font-weight: 900;
+      }
+
+      .error {
+        min-height: 1.5em;
+        margin: 14px 0 0;
+        color: var(--red);
+        font-weight: 900;
+      }
+    </style>
   </head>
-  <body class="min-h-screen bg-slate-950 text-white">
-    <main class="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center p-6">
-      <section id="loginView" class="rounded-2xl bg-white/10 p-6 shadow-2xl ring-1 ring-white/15">
-        <p class="text-sm font-bold uppercase tracking-wide text-cyan-300">Concurso en directo</p>
-        <h1 class="mt-2 text-4xl font-black">Entra al pulsador</h1>
-        <label class="mt-6 block">
-          <span class="text-sm font-bold text-slate-200">Nombre de usuario</span>
-          <input id="usernameInput" class="mt-2 w-full rounded-xl border-0 bg-white p-4 text-xl font-bold text-slate-950 outline-none ring-4 ring-transparent focus:ring-cyan-300" maxlength="40" placeholder="Tu nombre">
+  <body>
+    <canvas id="matrix"></canvas>
+
+    <main>
+      <section id="loginView" class="panel">
+        <p class="eyebrow">Concurso en directo</p>
+        <h1>Acceso</h1>
+        <label>
+          Nombre de usuario
+          <input id="usernameInput" maxlength="40" placeholder="Tu nombre">
         </label>
-        <button id="enterButton" class="mt-5 w-full rounded-xl bg-cyan-300 px-5 py-4 text-xl font-black text-slate-950 transition hover:scale-[1.01]">
+        <button id="enterButton" class="primary">
           Entrar
         </button>
-        <p id="loginError" class="mt-4 min-h-6 font-bold text-red-300"></p>
+        <p id="loginError" class="error"></p>
       </section>
 
-      <section id="buzzerView" class="hidden text-center">
-        <p id="helloText" class="mb-6 text-xl font-bold text-cyan-200"></p>
-        <button id="buzzButton" class="h-72 w-72 rounded-full bg-red-600 text-5xl font-black uppercase shadow-[0_24px_0_#7f1d1d] transition active:translate-y-5 active:shadow-[0_6px_0_#7f1d1d] disabled:opacity-60">
+      <section id="buzzerView" class="buzzer-screen hidden">
+        <p id="helloText" class="hello"></p>
+        <button id="buzzButton" class="buzz">
           Pulsador
         </button>
-        <button id="leaveButton" class="mt-10 rounded-xl bg-white/10 px-5 py-3 text-base font-black text-white ring-1 ring-white/20 transition hover:bg-white/20">
+        <br>
+        <button id="leaveButton" class="secondary">
           Salir y cambiar nombre
         </button>
-        <p id="statusText" class="mt-10 min-h-8 text-lg font-bold text-slate-300"></p>
+        <p id="statusText" class="status"></p>
       </section>
     </main>
 
@@ -239,6 +430,34 @@
         usernameInput.value = username;
         join();
       }
+
+      const canvas = document.querySelector("#matrix");
+      const ctx = canvas.getContext("2d");
+      const glyphs = "01ABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&/<>[]{}";
+      let drops = [];
+
+      function resizeMatrix() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        drops = Array(Math.ceil(canvas.width / 18)).fill(0).map(() => Math.random() * -80);
+      }
+
+      function drawMatrix() {
+        ctx.fillStyle = "rgba(2, 6, 4, 0.14)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#39ff88";
+        ctx.font = "18px Courier New";
+        drops.forEach((drop, index) => {
+          const char = glyphs[Math.floor(Math.random() * glyphs.length)];
+          ctx.fillText(char, index * 18, drop * 18);
+          drops[index] = drop * 18 > canvas.height && Math.random() > 0.975 ? 0 : drop + 1;
+        });
+        requestAnimationFrame(drawMatrix);
+      }
+
+      window.addEventListener("resize", resizeMatrix);
+      resizeMatrix();
+      drawMatrix();
     </script>
   </body>
 </html>
